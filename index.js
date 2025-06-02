@@ -54,6 +54,7 @@ const weatherIcons = {
 };
 
 const cityInput = document.getElementById('cityInput');
+const cityList = document.getElementById('cityList');
 const searchBtn = document.getElementById('searchBtn');
 const weekContainer = document.getElementById('week');
 const loadingOverlay = document.getElementById('loadingOverlay');
@@ -64,6 +65,17 @@ const celsiusBtn = document.getElementById('celsiusBtn');
 const fahrenheitBtn = document.getElementById('fahrenheitBtn');
 
 let currentUnit = 'celsius';
+
+function getUserDefaultCity() {
+    navigator.geolocation.getCurrentPosition(position => {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+        fetchWeather(`${lat},${lon}`);
+    }, error => {
+        console.error('Error getting location:', error);
+        fetchWeather(defaultCity);
+    });
+}
 
 function getWeatherIcon(condition) {
     return weatherIcons[condition] || 'wi-day-cloudy';
@@ -105,6 +117,43 @@ function formatTime(date) {
     });
 }
 
+function createCityListElement(city) {
+    const li = document.createElement('li');
+    const cityFullName = `${city.name}, ${city.region}, ${city.country}`;
+    li.textContent = cityFullName;
+    li.classList.add('city-item');
+    li.addEventListener('click', () => {
+        cityInput.value = cityFullName;
+        cityList.innerHTML = '';
+        cityList.style.display = 'none';
+        fetchWeather(city.name);
+    });
+    return li;
+}
+
+async function fetchCities(search = '') {
+    try {
+        const response = await fetch(`https://api.weatherapi.com/v1/search.json?key=${apiKey}&q=${search}`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch cities');
+        }
+        const cities = await response.json();
+        if (cities.length === 0) {
+            cityList.style.display = 'none';
+            return;
+        }
+        cityList.style.display = 'block';
+        cityList.innerHTML = '';
+        cities.forEach(city => {
+            const listElement = createCityListElement(city);
+            cityList.appendChild(listElement);
+        });
+    } catch (error) {
+        console.error('Error fetching cities:', error);
+        showError('Failed to load city list');
+    }
+}
+
 async function fetchWeather(city) {
     showLoading();
     try {
@@ -140,7 +189,9 @@ function getAirQualityText(aqi) {
 }
 
 function updateCurrentWeather(data) {
-    document.querySelector('.city-name').textContent = data.location.name;
+    const cityFullName = `${data.location.name}, ${data.location.region}, ${data.location.country}`;
+    cityInput.value = cityFullName;
+    document.querySelector('.city-name').textContent = cityFullName;
     updateTemperatureDisplay(document.getElementById('temp'), data.current.temp_c, currentUnit);
     document.getElementById('weather').textContent = data.current.condition.text;
     
@@ -200,6 +251,24 @@ cityInput.addEventListener('keypress', (e) => {
     }
 });
 
+cityInput.addEventListener('input', () => {
+    const search = cityInput.value.trim();
+    if (search.length >= 2) {
+        fetchCities(search);
+    } else {
+        cityList.style.display = 'none';
+        cityList.innerHTML = '';
+    }
+});
+
+cityInput.addEventListener('focus', () => {
+    const search = cityInput.value.trim();
+    if (search.length >= 2) {
+        fetchCities(search);
+        cityList.style.display = 'block';
+    }
+});
+
 closeError.addEventListener('click', hideError);
 
 celsiusBtn.addEventListener('click', () => {
@@ -227,5 +296,11 @@ fahrenheitBtn.addEventListener('click', () => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-    fetchWeather(defaultCity);
+     getUserDefaultCity();
 }); 
+
+document.addEventListener('click', (event) => {
+    if (!cityInput.contains(event.target) && !cityList.contains(event.target)) {
+        cityList.style.display = 'none';
+    }
+});

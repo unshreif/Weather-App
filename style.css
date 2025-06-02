@@ -32,7 +32,6 @@ body {
 
 /* Search Container Styles */
 .search-container {
-    margin-bottom: 2rem;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -47,7 +46,7 @@ body {
     border-radius: 50px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     backdrop-filter: blur(10px);
-    max-width: 500px;
+    max-width: 600px;
     width: 100%;
 }
 
@@ -83,6 +82,43 @@ body {
 
 #searchBtn:hover {
     transform: scale(1.1);
+}
+
+.city-selection {
+    margin-top: 0.5rem;
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.city-list {
+    display: none;
+    position: absolute;
+    top: 100px;
+    z-index: 1000;
+    list-style: none;
+    background: var(--card-bg);
+    border: none;
+    color: var(--text-color);
+    padding: 0.5rem;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 700px;
+    max-height: 140px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--secondary-color) transparent;
+}
+
+.city-list li {
+    padding: 0.5rem;
+    border-radius: 12px;
+}
+
+.city-list li:hover {
+    background: var(--accent-color);
 }
 
 .unit-toggle {
