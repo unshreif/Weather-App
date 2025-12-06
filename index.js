@@ -1,56 +1,48 @@
-const apiKey = '7d5b865ca184439bad0162808240710';
+const weatherApiKey = '7d5b865ca184439bad0162808240710';
 const defaultCity = 'Cairo';
 
-const weatherIcons = {
-    'Sunny': 'wi-day-sunny',
-    'Clear': 'wi-night-clear',
-    'Partly cloudy': 'wi-day-cloudy',
-    'Cloudy': 'wi-cloudy',
-    'Overcast': 'wi-cloudy',
-    'Mist': 'wi-fog',
-    'Patchy rain possible': 'wi-day-rain',
-    'Patchy snow possible': 'wi-day-snow',
-    'Patchy sleet possible': 'wi-day-sleet',
-    'Patchy freezing drizzle possible': 'wi-day-sleet',
-    'Thundery outbreaks possible': 'wi-day-thunderstorm',
-    'Blowing snow': 'wi-snow-wind',
-    'Blizzard': 'wi-snow-wind',
-    'Fog': 'wi-fog',
-    'Freezing fog': 'wi-fog',
-    'Patchy light drizzle': 'wi-day-sprinkle',
-    'Light drizzle': 'wi-sprinkle',
-    'Freezing drizzle': 'wi-sleet',
-    'Heavy freezing drizzle': 'wi-sleet',
-    'Patchy light rain': 'wi-day-rain',
-    'Light rain': 'wi-rain',
-    'Moderate rain at times': 'wi-rain',
-    'Moderate rain': 'wi-rain',
-    'Heavy rain at times': 'wi-rain',
-    'Heavy rain': 'wi-rain',
-    'Light freezing rain': 'wi-sleet',
-    'Moderate or heavy freezing rain': 'wi-sleet',
-    'Light sleet': 'wi-sleet',
-    'Moderate or heavy sleet': 'wi-sleet',
-    'Patchy light snow': 'wi-day-snow',
-    'Light snow': 'wi-snow',
-    'Patchy moderate snow': 'wi-snow',
-    'Moderate snow': 'wi-snow',
-    'Patchy heavy snow': 'wi-snow',
-    'Heavy snow': 'wi-snow',
-    'Ice pellets': 'wi-hail',
-    'Light rain shower': 'wi-showers',
-    'Moderate or heavy rain shower': 'wi-showers',
-    'Torrential rain shower': 'wi-showers',
-    'Light sleet showers': 'wi-sleet',
-    'Moderate or heavy sleet showers': 'wi-sleet',
-    'Light snow showers': 'wi-snow',
-    'Moderate or heavy snow showers': 'wi-snow',
-    'Light showers of ice pellets': 'wi-hail',
-    'Moderate or heavy showers of ice pellets': 'wi-hail',
-    'Patchy light rain with thunder': 'wi-thunderstorm',
-    'Moderate or heavy rain with thunder': 'wi-thunderstorm',
-    'Patchy light snow with thunder': 'wi-thunderstorm',
-    'Moderate or heavy snow with thunder': 'wi-thunderstorm'
+// WMO Weather Codes to Icons mapping
+const wmoIcons = {
+    0: 'wi-day-sunny', // Clear sky
+    1: 'wi-day-sunny-overcast', // Mainly clear
+    2: 'wi-day-cloudy', // Partly cloudy
+    3: 'wi-cloudy', // Overcast
+    45: 'wi-fog', // Fog
+    48: 'wi-fog', // Depositing rime fog
+    51: 'wi-sprinkle', // Drizzle: Light
+    53: 'wi-sprinkle', // Drizzle: Moderate
+    55: 'wi-showers', // Drizzle: Dense
+    56: 'wi-sleet', // Freezing Drizzle: Light
+    57: 'wi-sleet', // Freezing Drizzle: Dense
+    61: 'wi-rain', // Rain: Slight
+    63: 'wi-rain', // Rain: Moderate
+    65: 'wi-rain-wind', // Rain: Heavy
+    66: 'wi-sleet', // Freezing Rain: Light
+    67: 'wi-sleet', // Freezing Rain: Heavy
+    71: 'wi-snow', // Snow fall: Slight
+    73: 'wi-snow', // Snow fall: Moderate
+    75: 'wi-snow-wind', // Snow fall: Heavy
+    77: 'wi-hail', // Snow grains
+    80: 'wi-showers', // Rain showers: Slight
+    81: 'wi-showers', // Rain showers: Moderate
+    82: 'wi-storm-showers', // Rain showers: Violent
+    85: 'wi-snow', // Snow showers: Slight
+    86: 'wi-snow', // Snow showers: Heavy
+    95: 'wi-thunderstorm', // Thunderstorm: Slight or moderate
+    96: 'wi-storm-showers', // Thunderstorm with slight hail
+    99: 'wi-storm-showers' // Thunderstorm with heavy hail
+};
+
+const wmoDescriptions = {
+    0: 'Clear sky', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast',
+    45: 'Fog', 48: 'Depositing rime fog', 51: 'Light drizzle', 53: 'Moderate drizzle',
+    55: 'Dense drizzle', 56: 'Light freezing drizzle', 57: 'Dense freezing drizzle',
+    61: 'Slight rain', 63: 'Moderate rain', 65: 'Heavy rain', 66: 'Light freezing rain',
+    67: 'Heavy freezing rain', 71: 'Slight snow fall', 73: 'Moderate snow fall',
+    75: 'Heavy snow fall', 77: 'Snow grains', 80: 'Slight rain showers',
+    81: 'Moderate rain showers', 82: 'Violent rain showers', 85: 'Slight snow showers',
+    86: 'Heavy snow showers', 95: 'Thunderstorm', 96: 'Thunderstorm with hail',
+    99: 'Thunderstorm with heavy hail'
 };
 
 // DOM Elements
@@ -81,7 +73,7 @@ cityInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
         const city = cityInput.value.trim();
         if (city) {
-            fetchWeather(city);
+            resolveCityAndFetch(city);
             cityList.style.display = 'none';
         }
     }
@@ -102,7 +94,6 @@ cityInput.addEventListener('input', () => {
     }
 });
 
-// Close city list when clicking outside
 document.addEventListener('click', (event) => {
     if (!cityInput.contains(event.target) && !cityList.contains(event.target)) {
         cityList.style.display = 'none';
@@ -115,47 +106,26 @@ function getUserDefaultCity() {
     navigator.geolocation.getCurrentPosition(position => {
         const lat = position.coords.latitude;
         const lon = position.coords.longitude;
-        fetchWeather(`${lat},${lon}`);
+        // We need a city name for the display, so let's reverse geocode or just fetch weather
+        // Open-Meteo doesn't give city name. We can use WeatherAPI to get city name from lat/lon
+        fetchCityNameAndWeather(lat, lon);
     }, error => {
         console.error('Error getting location:', error);
-        fetchWeather(defaultCity);
+        resolveCityAndFetch(defaultCity);
     });
 }
 
 function toggleUnit() {
     currentUnit = currentUnit === 'celsius' ? 'fahrenheit' : 'celsius';
     unitText.textContent = currentUnit === 'celsius' ? '°C' : '°F';
-
-    // Update UI if we have data
     if (currentWeatherData) {
         updateUI(currentWeatherData);
     }
 }
 
-async function fetchWeather(city) {
-    showLoading();
-    try {
-        const apiUrl = `https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${city}&days=7&aqi=yes`;
-        const response = await fetch(apiUrl);
-
-        if (!response.ok) {
-            throw new Error('City not found');
-        }
-
-        const data = await response.json();
-        currentWeatherData = data; // Store for unit toggling
-        updateUI(data);
-    } catch (error) {
-        console.error('Error fetching weather data:', error);
-        showError(error.message);
-    } finally {
-        hideLoading();
-    }
-}
-
 async function fetchCities(search = '') {
     try {
-        const response = await fetch(`https://api.weatherapi.com/v1/search.json?key=${apiKey}&q=${search}`);
+        const response = await fetch(`https://api.weatherapi.com/v1/search.json?key=${weatherApiKey}&q=${search}`);
         if (!response.ok) throw new Error('Failed to fetch cities');
 
         const cities = await response.json();
@@ -173,12 +143,73 @@ async function fetchCities(search = '') {
             li.addEventListener('click', () => {
                 cityInput.value = city.name;
                 cityList.style.display = 'none';
-                fetchWeather(city.name);
+                // Pass name for display, but use lat/lon if available? 
+                // WeatherAPI search gives lat/lon.
+                fetchWeather(city.lat, city.lon, city.name);
             });
             cityList.appendChild(li);
         });
     } catch (error) {
         console.error('Error fetching cities:', error);
+    }
+}
+
+async function resolveCityAndFetch(cityName) {
+    showLoading();
+    try {
+        // Get coords from WeatherAPI
+        const response = await fetch(`https://api.weatherapi.com/v1/search.json?key=${weatherApiKey}&q=${cityName}`);
+        if (!response.ok) throw new Error('City not found');
+        const cities = await response.json();
+        if (cities.length === 0) throw new Error('City not found');
+
+        const city = cities[0];
+        fetchWeather(city.lat, city.lon, city.name);
+    } catch (error) {
+        console.error(error);
+        showError(error.message);
+        hideLoading();
+    }
+}
+
+async function fetchCityNameAndWeather(lat, lon) {
+    // Reverse geocode to get name (optional, or just show "My Location")
+    // We can use WeatherAPI search with lat,lon
+    try {
+        const response = await fetch(`https://api.weatherapi.com/v1/search.json?key=${weatherApiKey}&q=${lat},${lon}`);
+        const cities = await response.json();
+        const name = cities.length > 0 ? cities[0].name : 'My Location';
+        fetchWeather(lat, lon, name);
+    } catch (e) {
+        fetchWeather(lat, lon, 'My Location');
+    }
+}
+
+async function fetchWeather(lat, lon, cityName) {
+    showLoading();
+    try {
+        // Fetch from Open-Meteo
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`;
+
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Failed to fetch weather data');
+
+        const data = await response.json();
+
+        // Structure data for UI
+        currentWeatherData = {
+            cityName: cityName,
+            current: data.current,
+            daily: data.daily,
+            units: data.current_units
+        };
+
+        updateUI(currentWeatherData);
+    } catch (error) {
+        console.error('Error:', error);
+        showError('Could not retrieve weather data.');
+    } finally {
+        hideLoading();
     }
 }
 
@@ -191,59 +222,63 @@ function updateUI(data) {
 }
 
 function updateCurrentWeather(data) {
-    const { location, current } = data;
+    const { cityName, current } = data;
 
-    document.querySelector('.city-name').textContent = location.name;
-    document.getElementById('weather').textContent = current.condition.text;
+    document.querySelector('.city-name').textContent = cityName;
 
-    // Main Temp
-    const tempVal = currentUnit === 'celsius' ? current.temp_c : current.temp_f;
-    document.getElementById('temp').textContent = Math.round(tempVal);
+    const code = current.weather_code;
+    document.getElementById('weather').textContent = wmoDescriptions[code] || 'Unknown';
 
-    // Icon
-    const iconClass = weatherIcons[current.condition.text] || 'wi-day-cloudy';
-    document.getElementById('currentIcon').className = `wi ${iconClass}`;
+    // Temp
+    let temp = current.temperature_2m;
+    let feelsLike = current.apparent_temperature;
 
-    // Details
-    const feelsLike = currentUnit === 'celsius' ? current.feelslike_c : current.feelslike_f;
+    if (currentUnit === 'fahrenheit') {
+        temp = (temp * 9 / 5) + 32;
+        feelsLike = (feelsLike * 9 / 5) + 32;
+    }
+
+    document.getElementById('temp').textContent = Math.round(temp);
+    document.getElementById('currentIcon').className = `wi ${wmoIcons[code] || 'wi-day-cloudy'}`;
     document.getElementById('feelsLike').textContent = `${Math.round(feelsLike)}°`;
 
-    document.getElementById('windSpeed').textContent = `${current.wind_kph} km/h`;
-    document.getElementById('humidity').textContent = `${current.humidity}%`;
-    document.getElementById('visibility').textContent = `${current.vis_km} km`;
+    document.getElementById('windSpeed').textContent = `${current.wind_speed_10m} km/h`;
+    document.getElementById('humidity').textContent = `${current.relative_humidity_2m}%`;
 
-    if (current.air_quality) {
-        const aqi = current.air_quality['us-epa-index'];
-        document.getElementById('airQuality').textContent = getAirQualityText(aqi);
-    } else {
-        document.getElementById('airQuality').textContent = 'N/A';
-    }
+    // Open-Meteo doesn't give visibility/AQI in basic free call easily without extra params
+    document.getElementById('visibility').textContent = '--';
+    document.getElementById('airQuality').textContent = '--';
 }
 
 function updateForecast(data) {
     weekContainer.innerHTML = '';
+    const { daily } = data;
 
-    data.forecast.forecastday.forEach((day, index) => {
-        const date = new Date(day.date);
+    if (!daily || !daily.time) return;
+
+    for (let i = 0; i < daily.time.length; i++) {
+        const dateStr = daily.time[i];
+        const date = new Date(dateStr);
         const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
-        const temp = currentUnit === 'celsius' ? day.day.avgtemp_c : day.day.avgtemp_f;
+        const code = daily.weather_code[i];
+
+        let maxTemp = daily.temperature_2m_max[i];
+        if (currentUnit === 'fahrenheit') maxTemp = (maxTemp * 9 / 5) + 32;
 
         const item = document.createElement('div');
         item.className = 'forecast-item';
-        item.style.animation = `fadeIn 0.5s ease forwards ${index * 0.1}s`;
-        item.style.opacity = '0'; // Start hidden for animation
+        // Removed opacity: 0 to ensure visibility if animation fails
+        item.style.animation = `fadeIn 0.5s ease forwards ${i * 0.1}s`;
 
         item.innerHTML = `
             <span class="day">${dayName}</span>
-            <i class="wi ${weatherIcons[day.day.condition.text] || 'wi-day-cloudy'}"></i>
-            <span class="temp">${Math.round(temp)}°</span>
+            <i class="wi ${wmoIcons[code] || 'wi-day-cloudy'}"></i>
+            <span class="temp">${Math.round(maxTemp)}°</span>
         `;
 
         weekContainer.appendChild(item);
-    });
+    }
 }
-
-// --- Helper Functions ---
 
 function showLoading() { loadingOverlay.style.display = 'flex'; }
 function hideLoading() { loadingOverlay.style.display = 'none'; }
@@ -262,9 +297,5 @@ function updateLastUpdated() {
 }
 
 function getAirQualityText(aqi) {
-    const map = {
-        1: 'Good', 2: 'Moderate', 3: 'Sensitive',
-        4: 'Unhealthy', 5: 'Very Unhealthy', 6: 'Hazardous'
-    };
-    return map[aqi] || 'Unknown';
+    return 'N/A';
 }
