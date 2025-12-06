@@ -53,18 +53,63 @@ const weatherIcons = {
     'Moderate or heavy snow with thunder': 'wi-thunderstorm'
 };
 
+// DOM Elements
 const cityInput = document.getElementById('cityInput');
 const cityList = document.getElementById('cityList');
-const searchBtn = document.getElementById('searchBtn');
 const weekContainer = document.getElementById('week');
 const loadingOverlay = document.getElementById('loadingOverlay');
 const errorModal = document.getElementById('errorModal');
 const errorMessage = document.getElementById('errorMessage');
 const closeError = document.getElementById('closeError');
-const celsiusBtn = document.getElementById('celsiusBtn');
-const fahrenheitBtn = document.getElementById('fahrenheitBtn');
+const unitToggle = document.getElementById('unitToggle');
+const unitText = document.querySelector('.unit-text');
 
-let currentUnit = 'celsius';
+// State
+let currentUnit = 'celsius'; // 'celsius' or 'fahrenheit'
+let currentWeatherData = null; // Store data to re-render on unit toggle
+
+// --- Initialization ---
+document.addEventListener('DOMContentLoaded', () => {
+    getUserDefaultCity();
+});
+
+// --- Event Listeners ---
+unitToggle.addEventListener('click', toggleUnit);
+closeError.addEventListener('click', hideError);
+
+cityInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        const city = cityInput.value.trim();
+        if (city) {
+            fetchWeather(city);
+            cityList.style.display = 'none';
+        }
+    }
+});
+
+let debounceTimer;
+cityInput.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    const search = cityInput.value.trim();
+
+    if (search.length >= 2) {
+        debounceTimer = setTimeout(() => {
+            fetchCities(search);
+        }, 300);
+    } else {
+        cityList.style.display = 'none';
+        cityList.innerHTML = '';
+    }
+});
+
+// Close city list when clicking outside
+document.addEventListener('click', (event) => {
+    if (!cityInput.contains(event.target) && !cityList.contains(event.target)) {
+        cityList.style.display = 'none';
+    }
+});
+
+// --- Core Functions ---
 
 function getUserDefaultCity() {
     navigator.geolocation.getCurrentPosition(position => {
@@ -77,80 +122,13 @@ function getUserDefaultCity() {
     });
 }
 
-function getWeatherIcon(condition) {
-    return weatherIcons[condition] || 'wi-day-cloudy';
-}
+function toggleUnit() {
+    currentUnit = currentUnit === 'celsius' ? 'fahrenheit' : 'celsius';
+    unitText.textContent = currentUnit === 'celsius' ? '°C' : '°F';
 
-function showLoading() {
-    loadingOverlay.style.display = 'flex';
-}
-
-function hideLoading() {
-    loadingOverlay.style.display = 'none';
-}
-
-function showError(message) {
-    errorMessage.textContent = message;
-    errorModal.style.display = 'flex';
-}
-
-function hideError() {
-    errorModal.style.display = 'none';
-}
-
-function convertTemp(temp, unit) {
-    if (unit === 'fahrenheit') {
-        return Math.round((temp * 9/5) + 32);
-    }
-    return Math.round(temp);
-}
-
-function updateTemperatureDisplay(element, temp, unit) {
-    const convertedTemp = convertTemp(temp, unit);
-    element.textContent = `${convertedTemp}°${unit === 'celsius' ? 'C' : 'F'}`;
-}
-
-function formatTime(date) {
-    return new Date(date).toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-}
-
-function createCityListElement(city) {
-    const li = document.createElement('li');
-    const cityFullName = `${city.name}, ${city.region}, ${city.country}`;
-    li.textContent = cityFullName;
-    li.classList.add('city-item');
-    li.addEventListener('click', () => {
-        cityInput.value = cityFullName;
-        cityList.innerHTML = '';
-        cityList.style.display = 'none';
-        fetchWeather(city.name);
-    });
-    return li;
-}
-
-async function fetchCities(search = '') {
-    try {
-        const response = await fetch(`https://api.weatherapi.com/v1/search.json?key=${apiKey}&q=${search}`);
-        if (!response.ok) {
-            throw new Error('Failed to fetch cities');
-        }
-        const cities = await response.json();
-        if (cities.length === 0) {
-            cityList.style.display = 'none';
-            return;
-        }
-        cityList.style.display = 'block';
-        cityList.innerHTML = '';
-        cities.forEach(city => {
-            const listElement = createCityListElement(city);
-            cityList.appendChild(listElement);
-        });
-    } catch (error) {
-        console.error('Error fetching cities:', error);
-        showError('Failed to load city list');
+    // Update UI if we have data
+    if (currentWeatherData) {
+        updateUI(currentWeatherData);
     }
 }
 
@@ -159,15 +137,14 @@ async function fetchWeather(city) {
     try {
         const apiUrl = `https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${city}&days=7&aqi=yes`;
         const response = await fetch(apiUrl);
-        
+
         if (!response.ok) {
             throw new Error('City not found');
         }
 
         const data = await response.json();
-        updateCurrentWeather(data);
-        updateForecast(data);
-        updateLastUpdated();
+        currentWeatherData = data; // Store for unit toggling
+        updateUI(data);
     } catch (error) {
         console.error('Error fetching weather data:', error);
         showError(error.message);
@@ -176,33 +153,71 @@ async function fetchWeather(city) {
     }
 }
 
-function getAirQualityText(aqi) {
-    const qualityMap = {
-        1: 'Good',
-        2: 'Moderate',
-        3: 'Unhealthy for Sensitive Groups',
-        4: 'Unhealthy',
-        5: 'Very Unhealthy',
-        6: 'Hazardous'
-    };
-    return qualityMap[aqi] || 'Unknown';
+async function fetchCities(search = '') {
+    try {
+        const response = await fetch(`https://api.weatherapi.com/v1/search.json?key=${apiKey}&q=${search}`);
+        if (!response.ok) throw new Error('Failed to fetch cities');
+
+        const cities = await response.json();
+        if (cities.length === 0) {
+            cityList.style.display = 'none';
+            return;
+        }
+
+        cityList.style.display = 'block';
+        cityList.innerHTML = '';
+        cities.forEach(city => {
+            const li = document.createElement('li');
+            li.className = 'city-item';
+            li.textContent = `${city.name}, ${city.country}`;
+            li.addEventListener('click', () => {
+                cityInput.value = city.name;
+                cityList.style.display = 'none';
+                fetchWeather(city.name);
+            });
+            cityList.appendChild(li);
+        });
+    } catch (error) {
+        console.error('Error fetching cities:', error);
+    }
+}
+
+// --- UI Update Functions ---
+
+function updateUI(data) {
+    updateCurrentWeather(data);
+    updateForecast(data);
+    updateLastUpdated();
 }
 
 function updateCurrentWeather(data) {
-    const cityFullName = `${data.location.name}, ${data.location.region}, ${data.location.country}`;
-    cityInput.value = cityFullName;
-    document.querySelector('.city-name').textContent = cityFullName;
-    updateTemperatureDisplay(document.getElementById('temp'), data.current.temp_c, currentUnit);
-    document.getElementById('weather').textContent = data.current.condition.text;
-    
-    const currentIcon = document.getElementById('currentIcon');
-    currentIcon.className = `wi ${getWeatherIcon(data.current.condition.text)}`;
+    const { location, current } = data;
 
-    updateTemperatureDisplay(document.getElementById('feelsLike'), data.current.feelslike_c, currentUnit);
-    document.getElementById('windSpeed').textContent = `${data.current.wind_kph} km/h`;
-    document.getElementById('humidity').textContent = `${data.current.humidity}%`;
-    document.getElementById('visibility').textContent = `${data.current.vis_km} km`;
-    document.getElementById('airQuality').textContent = getAirQualityText(data.current.air_quality['us-epa-index']);
+    document.querySelector('.city-name').textContent = location.name;
+    document.getElementById('weather').textContent = current.condition.text;
+
+    // Main Temp
+    const tempVal = currentUnit === 'celsius' ? current.temp_c : current.temp_f;
+    document.getElementById('temp').textContent = Math.round(tempVal);
+
+    // Icon
+    const iconClass = weatherIcons[current.condition.text] || 'wi-day-cloudy';
+    document.getElementById('currentIcon').className = `wi ${iconClass}`;
+
+    // Details
+    const feelsLike = currentUnit === 'celsius' ? current.feelslike_c : current.feelslike_f;
+    document.getElementById('feelsLike').textContent = `${Math.round(feelsLike)}°`;
+
+    document.getElementById('windSpeed').textContent = `${current.wind_kph} km/h`;
+    document.getElementById('humidity').textContent = `${current.humidity}%`;
+    document.getElementById('visibility').textContent = `${current.vis_km} km`;
+
+    if (current.air_quality) {
+        const aqi = current.air_quality['us-epa-index'];
+        document.getElementById('airQuality').textContent = getAirQualityText(aqi);
+    } else {
+        document.getElementById('airQuality').textContent = 'N/A';
+    }
 }
 
 function updateForecast(data) {
@@ -211,96 +226,45 @@ function updateForecast(data) {
     data.forecast.forecastday.forEach((day, index) => {
         const date = new Date(day.date);
         const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
-        
-        const forecastDay = document.createElement('div');
-        forecastDay.className = 'forecast-day';
-        forecastDay.innerHTML = `
-            <div class="date">${dayName}</div>
-            <i class="wi ${getWeatherIcon(day.day.condition.text)}"></i>
-            <div class="temp"></div>
+        const temp = currentUnit === 'celsius' ? day.day.avgtemp_c : day.day.avgtemp_f;
+
+        const item = document.createElement('div');
+        item.className = 'forecast-item';
+        item.style.animation = `fadeIn 0.5s ease forwards ${index * 0.1}s`;
+        item.style.opacity = '0'; // Start hidden for animation
+
+        item.innerHTML = `
+            <span class="day">${dayName}</span>
+            <i class="wi ${weatherIcons[day.day.condition.text] || 'wi-day-cloudy'}"></i>
+            <span class="temp">${Math.round(temp)}°</span>
         `;
-        
-        updateTemperatureDisplay(
-            forecastDay.querySelector('.temp'),
-            day.day.avgtemp_c,
-            currentUnit
-        );
-        
-        weekContainer.appendChild(forecastDay);
+
+        weekContainer.appendChild(item);
     });
 }
 
+// --- Helper Functions ---
+
+function showLoading() { loadingOverlay.style.display = 'flex'; }
+function hideLoading() { loadingOverlay.style.display = 'none'; }
+function showError(msg) {
+    errorMessage.textContent = msg;
+    errorModal.style.display = 'flex';
+}
+function hideError() { errorModal.style.display = 'none'; }
+
 function updateLastUpdated() {
     const now = new Date();
-    document.getElementById('lastUpdated').textContent = formatTime(now);
+    document.getElementById('lastUpdated').textContent = now.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 }
 
-searchBtn.addEventListener('click', () => {
-    const city = cityInput.value.trim();
-    if (city) {
-        fetchWeather(city);
-    }
-});
-
-cityInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        const city = cityInput.value.trim();
-        if (city) {
-            fetchWeather(city);
-        }
-    }
-});
-
-cityInput.addEventListener('input', () => {
-    const search = cityInput.value.trim();
-    if (search.length >= 2) {
-        fetchCities(search);
-    } else {
-        cityList.style.display = 'none';
-        cityList.innerHTML = '';
-    }
-});
-
-cityInput.addEventListener('focus', () => {
-    const search = cityInput.value.trim();
-    if (search.length >= 2) {
-        fetchCities(search);
-        cityList.style.display = 'block';
-    }
-});
-
-closeError.addEventListener('click', hideError);
-
-celsiusBtn.addEventListener('click', () => {
-    if (currentUnit !== 'celsius') {
-        currentUnit = 'celsius';
-        celsiusBtn.classList.add('active');
-        fahrenheitBtn.classList.remove('active');
-        const city = cityInput.value.trim();
-        if (city) {
-            fetchWeather(city);
-        }
-    }
-});
-
-fahrenheitBtn.addEventListener('click', () => {
-    if (currentUnit !== 'fahrenheit') {
-        currentUnit = 'fahrenheit';
-        fahrenheitBtn.classList.add('active');
-        celsiusBtn.classList.remove('active');
-        const city = cityInput.value.trim();
-        if (city) {
-            fetchWeather(city);
-        }
-    }
-});
-
-document.addEventListener('DOMContentLoaded', () => {
-     getUserDefaultCity();
-}); 
-
-document.addEventListener('click', (event) => {
-    if (!cityInput.contains(event.target) && !cityList.contains(event.target)) {
-        cityList.style.display = 'none';
-    }
-});
+function getAirQualityText(aqi) {
+    const map = {
+        1: 'Good', 2: 'Moderate', 3: 'Sensitive',
+        4: 'Unhealthy', 5: 'Very Unhealthy', 6: 'Hazardous'
+    };
+    return map[aqi] || 'Unknown';
+}

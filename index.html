@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weather Forecast</title>
+    <title>Weather</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -11,108 +12,115 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/weather-icons/2.0.12/css/weather-icons.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-    <div class="app-container">
-        <div class="search-container">
-            <div class="search-box">
-                <i class="fas fa-search search-icon"></i>
-                <input type="text" id="cityInput" placeholder="Enter city name..." value="Cairo">
-                <button id="searchBtn">
-                    <i class="fas fa-arrow-right"></i>
+    <div class="aurora-bg">
+        <div class="aurora-1"></div>
+        <div class="aurora-2"></div>
+        <div class="aurora-3"></div>
+    </div>
+
+    <div class="app-wrapper">
+        <header class="app-header">
+            <div class="logo">
+                <h1>Weather</h1>
+            </div>
+            <div class="search-bar">
+                <i class="fas fa-search"></i>
+                <input type="text" id="cityInput" placeholder="Search city..." value="Cairo" autocomplete="off">
+                <ul id="cityList" class="city-suggestions"></ul>
+            </div>
+            <div class="controls">
+                <button id="unitToggle" class="icon-btn" aria-label="Toggle Unit">
+                    <span class="unit-text">°C</span>
                 </button>
             </div>
-            <div class="unit-toggle">
-                <button id="celsiusBtn" class="active">°C</button>
-                <button id="fahrenheitBtn">°F</button>
-            </div>
-        </div>
-        
-        <div class="city-selection">
-            <ul id="cityList" class="city-list">
+        </header>
 
-            </ul>
-        </div>
-
-        <div class="weather-container">
-            <div class="current-weather">
-                <div class="weather-info">
+        <main class="bento-grid">
+            <!-- Main Weather Cell -->
+            <div class="bento-cell main-weather">
+                <div class="weather-primary">
                     <h2 class="city-name">Loading...</h2>
-                    <div class="temperature">
-                        <span id="temp">--</span>
-                        <span class="unit"> </span>
+                    <div class="temp-display">
+                        <span id="temp">--</span><span class="unit-symbol">°</span>
                     </div>
-                    <p class="weather-desc" id="weather">--</p>
-                    <div class="last-updated">
-                        Last updated: <span id="lastUpdated">--</span>
-                    </div>
+                    <p id="weather" class="weather-condition">--</p>
                 </div>
-                <div class="weather-icon">
+                <div class="weather-visual">
                     <i id="currentIcon" class="wi"></i>
                 </div>
-            </div>
-
-            <div class="weather-details">
-                <div class="detail-item">
-                    <i class="fas fa-temperature-high"></i>
-                    <div class="detail-info">
-                        <span class="detail-label">Feels Like</span>
-                        <span id="feelsLike">--°C</span>
-                    </div>
-                </div>
-                <div class="detail-item">
-                    <i class="fas fa-wind"></i>
-                    <div class="detail-info">
-                        <span class="detail-label">Wind Speed</span>
-                        <span id="windSpeed">-- km/h</span>
-                    </div>
-                </div>
-                <div class="detail-item">
-                    <i class="fas fa-tint"></i>
-                    <div class="detail-info">
-                        <span class="detail-label">Humidity</span>
-                        <span id="humidity">--%</span>
-                    </div>
-                </div>
-                <div class="detail-item">
-                    <i class="fas fa-eye"></i>
-                    <div class="detail-info">
-                        <span class="detail-label">Visibility</span>
-                        <span id="visibility">-- km</span>
-                    </div>
-                </div>
-                <div class="detail-item">
-                    <i class="fas fa-wind"></i>
-                    <div class="detail-info">
-                        <span class="detail-label">Air Quality</span>
-                        <span id="airQuality">--</span>
-                    </div>
+                <div class="update-info">
+                    <i class="fas fa-sync-alt"></i> <span id="lastUpdated">--</span>
                 </div>
             </div>
 
-            <div class="forecast-container">
-                <h3>3-Day Forecast</h3>
-                <div class="forecast-grid" id="week">
-                    <!-- Forecast days will be inserted here by JavaScript -->
+            <!-- Forecast Strip Cell -->
+            <div class="bento-cell forecast-strip">
+                <h3>7-Day Forecast</h3>
+                <div class="forecast-row" id="week">
+                    <!-- Forecast items injected here -->
                 </div>
             </div>
-        </div>
+
+            <!-- Detail Cells -->
+            <div class="bento-cell detail-cell feels-like">
+                <div class="detail-icon"><i class="fas fa-temperature-high"></i></div>
+                <div class="detail-content">
+                    <span class="label">Feels Like</span>
+                    <span class="value" id="feelsLike">--°</span>
+                </div>
+            </div>
+
+            <div class="bento-cell detail-cell wind">
+                <div class="detail-icon"><i class="fas fa-wind"></i></div>
+                <div class="detail-content">
+                    <span class="label">Wind</span>
+                    <span class="value" id="windSpeed">-- km/h</span>
+                </div>
+            </div>
+
+            <div class="bento-cell detail-cell humidity">
+                <div class="detail-icon"><i class="fas fa-tint"></i></div>
+                <div class="detail-content">
+                    <span class="label">Humidity</span>
+                    <span class="value" id="humidity">--%</span>
+                </div>
+            </div>
+
+            <div class="bento-cell detail-cell visibility">
+                <div class="detail-icon"><i class="fas fa-eye"></i></div>
+                <div class="detail-content">
+                    <span class="label">Visibility</span>
+                    <span class="value" id="visibility">-- km</span>
+                </div>
+            </div>
+
+            <div class="bento-cell detail-cell air-quality">
+                <div class="detail-icon"><i class="fas fa-leaf"></i></div>
+                <div class="detail-content">
+                    <span class="label">Air Quality</span>
+                    <span class="value" id="airQuality">--</span>
+                </div>
+            </div>
+        </main>
     </div>
 
-    <!-- Loading Overlay -->
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="loading-spinner"></div>
+    <!-- Loading & Error Overlays -->
+    <div class="overlay" id="loadingOverlay">
+        <div class="loader-ring"></div>
     </div>
 
-    <!-- Error Modal -->
-    <div class="error-modal" id="errorModal">
-        <div class="error-content">
-            <i class="fas fa-exclamation-circle"></i>
-            <h3>Error</h3>
-            <p id="errorMessage"></p>
-            <button id="closeError">Close</button>
+    <div class="overlay" id="errorModal">
+        <div class="modal-glass">
+            <i class="fas fa-bolt error-icon"></i>
+            <h3>Connection Error</h3>
+            <p id="errorMessage">Something went wrong.</p>
+            <button id="closeError" class="glass-btn">Dismiss</button>
         </div>
     </div>
 
     <script src="index.js"></script>
 </body>
+
 </html>
